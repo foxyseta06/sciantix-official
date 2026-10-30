@@ -15,10 +15,10 @@
 //////////////////////////////////////////////////////////////////////////////////////
 
 #include "Constants.h"
-#include "MainVariables.h"
-#include "OCUtilsCoupling.h"
 #include "JOGSurrogate.h"
 #include "JOGSurrogateCoupling.h"
+#include "MainVariables.h"
+#include "OCUtilsCoupling.h"
 #include "Simulation.h"
 #include "ThermochemistrySettings.h"
 
@@ -282,12 +282,16 @@ void Simulation::SetPhaseDiagram()
             // CODE DEVELOPMENT : JOG NEURAL NETWORK (E. Perugini)
             if (use_neural_network)
             {
-                const JOGSurrogate::Model& model = JOGSurrogate::sharedModel(
-                    JOGSurrogateCoupling::resolveWeightsPath(Sciantix_thermochemistry_settings.neuralnetwork_path, TestPath));
-                JOGSurrogate::Result nn_result;
-                solved = JOGSurrogateCoupling::fillOutputData(model, current_temperature, components,
+                const JOGSurrogate::Model& model = JOGSurrogate::sharedModel(JOGSurrogateCoupling::resolveWeightsPath(
+                    Sciantix_thermochemistry_settings.neuralnetwork_path, TestPath));
+                JOGSurrogate::Result       nn_result;
+                solved                           = JOGSurrogateCoupling::fillOutputData(model,
+                                                              current_temperature,
+                                                              components,
                                                               JOGSurrogate::OxygenInput::Potential,
-                                                              current_oxygen_potential, output_data, &nn_result);
+                                                              current_oxygen_potential,
+                                                              output_data,
+                                                              &nn_result);
                 static bool out_of_domain_warned = false;
                 if (solved && nn_result.flags != 0 && !out_of_domain_warned)
                 {
@@ -297,28 +301,28 @@ void Simulation::SetPhaseDiagram()
                 }
             }
             else  // OpenCalphad (original code, unchanged)
-            for (const auto& solver : solvers)
-            {
-                output_data.solution_phases.clear();
-                output_data.components.clear();
-
-                const bool case_success      = OCUtilsCoupling::runOpenCalphadCaseOCASI(data_path,
-                                                                                   current_temperature,
-                                                                                   current_pressure,
-                                                                                   components,
-                                                                                   valid_elements,
-                                                                                   solver,
-                                                                                   location,
-                                                                                   current_oxygen_potential,
-                                                                                   output_data);
-                const bool has_usable_output = !output_data.solution_phases.empty();
-
-                if (case_success && has_usable_output)
+                for (const auto& solver : solvers)
                 {
-                    solved = true;
-                    break;
+                    output_data.solution_phases.clear();
+                    output_data.components.clear();
+
+                    const bool case_success      = OCUtilsCoupling::runOpenCalphadCaseOCASI(data_path,
+                                                                                       current_temperature,
+                                                                                       current_pressure,
+                                                                                       components,
+                                                                                       valid_elements,
+                                                                                       solver,
+                                                                                       location,
+                                                                                       current_oxygen_potential,
+                                                                                       output_data);
+                    const bool has_usable_output = !output_data.solution_phases.empty();
+
+                    if (case_success && has_usable_output)
+                    {
+                        solved = true;
+                        break;
+                    }
                 }
-            }
 
             if (solved)
             {

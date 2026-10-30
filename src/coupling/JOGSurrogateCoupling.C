@@ -3,16 +3,16 @@
 //  Author: E. Perugini (MSc thesis, Politecnico di Milano), 2026.                  //
 //////////////////////////////////////////////////////////////////////////////////////
 
-#include "JOGSurrogateCoupling.h"
 #include "Constants.h"
+#include "JOGSurrogateCoupling.h"
 
+#include <unistd.h>
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <map>
-#include <unistd.h>
 
 namespace JOGSurrogateCoupling
 {
@@ -20,7 +20,8 @@ namespace JOGSurrogateCoupling
     {
         std::string upper(std::string s)
         {
-            std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+            std::transform(
+                s.begin(), s.end(), s.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
             return s;
         }
 
@@ -55,7 +56,8 @@ namespace JOGSurrogateCoupling
         for (const auto& c : components)
         {
             size_t e = 0;
-            while (e < elements.size() && upper(elements[e]) != upper(c.name)) ++e;
+            while (e < elements.size() && upper(elements[e]) != upper(c.name))
+                ++e;
             if (e == elements.size())
             {
                 std::cerr << "Error: JOG neural network: element " << c.name << " is not a network input" << std::endl;
@@ -65,11 +67,15 @@ namespace JOGSurrogateCoupling
         }
         double sum_metals = 0.0;
         for (size_t e = 0; e < elements.size(); ++e)
-            if (static_cast<int>(e) != io) sum_metals += fractions[e];
-        if (sum_metals <= 0.0) return false;
+            if (static_cast<int>(e) != io)
+                sum_metals += fractions[e];
+        if (sum_metals <= 0.0)
+            return false;
 
-        const JOGSurrogate::Result res = model.evaluate(temperature, fractions, oxygen_input, oxygen_potential_kj_per_mol_o2);
-        if (result) *result = res;
+        const JOGSurrogate::Result res =
+            model.evaluate(temperature, fractions, oxygen_input, oxygen_potential_kj_per_mol_o2);
+        if (result)
+            *result = res;
 
         // per mole of system -> same normalization as OpenCalphad (metals equal to their input fractions)
         const double scale = sum_metals / (1.0 - res.x_o);
@@ -82,19 +88,21 @@ namespace JOGSurrogateCoupling
             for (size_t e = 0; e < elements.size(); ++e)
             {
                 const double n = res.moles[g][e] * scale;
-                if (n <= negligible_moles) continue;
+                if (n <= negligible_moles)
+                    continue;
                 phase.elements[elements[e]]       = n;
                 phase.element_masses[elements[e]] = n * atomicMassOf(elements[e]);
                 phase.moles += n;
                 phase.mass += phase.element_masses[elements[e]];
             }
-            if (phase.moles <= negligible_moles) continue;
+            if (phase.moles <= negligible_moles)
+                continue;
 
             const std::string& name = model.groups()[g];
             if (name == "GAS")
             {
-                phase.form_units                     = phase.moles;
-                output_data.solution_phases["gas"]   = phase;
+                phase.form_units                   = phase.moles;
+                output_data.solution_phases["gas"] = phase;
             }
             else if (name == "LIQUID")
             {
@@ -106,7 +114,7 @@ namespace JOGSurrogateCoupling
                 //     (4 O per Mo), the remaining Mo is Mo+4 cation, the remaining O is O-2;
                 //   metallic liquid: second sublattice VA.
                 // These are not CALPHAD site fractions: they only carry the information JOGFormation uses.
-                const auto   element_moles = [&](const std::string& el)
+                const auto element_moles = [&](const std::string& el)
                 {
                     const auto it = phase.elements.find(el);
                     return it != phase.elements.end() ? it->second : 0.0;
@@ -117,9 +125,14 @@ namespace JOGSurrogateCoupling
                 const double n_moo4   = is_oxide ? std::min(n_mo, n_oxygen / 4.0) : 0.0;
                 const double n_o2     = is_oxide ? n_oxygen - 4.0 * n_moo4 : 0.0;
 
-                static const std::map<std::string, std::string> cation_of = {
-                    {"Ba", "BA+2"}, {"Cs", "CS+"}, {"Mo", "MO+4"}, {"Pd", "PD+2"}, {"Rh", "RH+3"}, {"Ru", "RU+4"}, {"Tc", "TC+4"}};
-                OCSublatticeData cation;
+                static const std::map<std::string, std::string> cation_of = {{"Ba", "BA+2"},
+                                                                             {"Cs", "CS+"},
+                                                                             {"Mo", "MO+4"},
+                                                                             {"Pd", "PD+2"},
+                                                                             {"Rh", "RH+3"},
+                                                                             {"Ru", "RU+4"},
+                                                                             {"Tc", "TC+4"}};
+                OCSublatticeData                                cation;
                 cation.index            = 1;
                 cation.sites            = 1.0;
                 cation.phase_moles      = phase.moles;
@@ -129,13 +142,16 @@ namespace JOGSurrogateCoupling
                 for (const auto& el : phase.elements)
                 {
                     const auto c = cation_of.find(el.first);
-                    if (c == cation_of.end()) continue;
+                    if (c == cation_of.end())
+                        continue;
                     const double n = el.first == "Mo" ? el.second - n_moo4 : el.second;
-                    if (n <= negligible_moles) continue;
+                    if (n <= negligible_moles)
+                        continue;
                     cation.composition[c->second] = n;
                     n_cations += n;
                 }
-                for (auto& c : cation.composition) c.second /= n_cations;
+                for (auto& c : cation.composition)
+                    c.second /= n_cations;
                 cation.constituents_count = static_cast<int>(cation.composition.size());
 
                 OCSublatticeData anion;
@@ -146,14 +162,17 @@ namespace JOGSurrogateCoupling
                 anion.phase_instance   = "LIQUID";
                 if (is_oxide && n_moo4 + n_o2 > negligible_moles)
                 {
-                    if (n_moo4 > negligible_moles) anion.composition["MOO4-2"] = n_moo4 / (n_moo4 + n_o2);
-                    if (n_o2 > negligible_moles) anion.composition["O-2"] = n_o2 / (n_moo4 + n_o2);
+                    if (n_moo4 > negligible_moles)
+                        anion.composition["MOO4-2"] = n_moo4 / (n_moo4 + n_o2);
+                    if (n_o2 > negligible_moles)
+                        anion.composition["O-2"] = n_o2 / (n_moo4 + n_o2);
                 }
                 else
                     anion.composition["VA"] = 1.0;
                 anion.constituents_count = static_cast<int>(anion.composition.size());
 
-                if (n_cations > negligible_moles) phase.sublattices.push_back(cation);
+                if (n_cations > negligible_moles)
+                    phase.sublattices.push_back(cation);
                 phase.sublattices.push_back(anion);
                 phase.form_units                      = phase.moles;
                 output_data.solution_phases["liquid"] = phase;
@@ -173,8 +192,10 @@ namespace JOGSurrogateCoupling
                 condensed.moles += phase.moles;
                 condensed.form_units += species.moles;
                 condensed.mass += phase.mass;
-                for (const auto& el : phase.elements) condensed.elements[el.first] += el.second;
-                for (const auto& el : phase.element_masses) condensed.element_masses[el.first] += el.second;
+                for (const auto& el : phase.elements)
+                    condensed.elements[el.first] += el.second;
+                for (const auto& el : phase.element_masses)
+                    condensed.element_masses[el.first] += el.second;
                 condensed.species[species_name] = species;
             }
         }
@@ -186,11 +207,13 @@ namespace JOGSurrogateCoupling
         auto exists = [](const std::string& p) { return !p.empty() && std::ifstream(p).good(); };
         if (!name.empty() && name[0] == '/')
         {
-            if (exists(name)) return name;
+            if (exists(name))
+                return name;
         }
         else
         {
-            if (exists(test_path + name)) return test_path + name;
+            if (exists(test_path + name))
+                return test_path + name;
             // data/ folder of the SCIANTIX checkout, searched upward from the executable
             char          buffer[4096];
             const ssize_t length = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
@@ -198,10 +221,12 @@ namespace JOGSurrogateCoupling
             {
                 buffer[length]  = '\0';
                 std::string dir = buffer;
-                for (size_t cut = dir.find_last_of('/'); cut != std::string::npos && cut > 0; cut = dir.find_last_of('/'))
+                for (size_t cut = dir.find_last_of('/'); cut != std::string::npos && cut > 0;
+                     cut        = dir.find_last_of('/'))
                 {
                     dir = dir.substr(0, cut);
-                    if (exists(dir + "/data/" + name)) return dir + "/data/" + name;
+                    if (exists(dir + "/data/" + name))
+                        return dir + "/data/" + name;
                 }
             }
         }

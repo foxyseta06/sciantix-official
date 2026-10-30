@@ -26,7 +26,7 @@ namespace JOGSurrogate
         std::string                      name;
         std::vector<double>              input_min, input_max;
         double                           output_min = 0.0, output_max = 1.0;
-        bool                             clip01     = false;
+        bool                             clip01 = false;
         std::vector<int>                 n_in, n_out;
         std::vector<bool>                relu;
         std::vector<std::vector<double>> weights;  // row-major, rows = outputs
@@ -59,23 +59,46 @@ namespace JOGSurrogate
 
     class Model
     {
-    public:
+      public:
         /// Reads the weights text file (format in docs/JOG_ANN.md). Returns false and an error message on failure.
         bool load(const std::string& path, std::string& error);
-        bool isLoaded() const { return loaded_; }
+        bool isLoaded() const
+        {
+            return loaded_;
+        }
 
         /// fractions: element fractions in the order of elements(); in Potential mode the O entry is ignored.
-        Result evaluate(double temperature, const std::vector<double>& fractions, OxygenInput mode,
-                        double oxygen_potential_kj_per_mol_o2) const;
+        Result evaluate(double                     temperature,
+                        const std::vector<double>& fractions,
+                        OxygenInput                mode,
+                        double                     oxygen_potential_kj_per_mol_o2) const;
 
-        const std::vector<std::string>& elements() const { return elements_; }
-        const std::vector<std::string>& groups() const { return groups_; }
-        bool   isStoichiometric(int group) const { return stech_index_[group] >= 0; }
-        int    atomsPerFormula(int group) const { return stech_index_[group] >= 0 ? stech_atoms_[stech_index_[group]] : 1; }
-        double alphaBetaTemperature() const { return alpha_beta_T_; }
-        int    oxygenIndex() const { return oxygen_index_; }
+        const std::vector<std::string>& elements() const
+        {
+            return elements_;
+        }
+        const std::vector<std::string>& groups() const
+        {
+            return groups_;
+        }
+        bool isStoichiometric(int group) const
+        {
+            return stech_index_[group] >= 0;
+        }
+        int atomsPerFormula(int group) const
+        {
+            return stech_index_[group] >= 0 ? stech_atoms_[stech_index_[group]] : 1;
+        }
+        double alphaBetaTemperature() const
+        {
+            return alpha_beta_T_;
+        }
+        int oxygenIndex() const
+        {
+            return oxygen_index_;
+        }
 
-    private:
+      private:
         double opot(double y_cs, double x_o, double temperature) const;
         void   reduceStoichiometric(std::vector<double>& f, const std::vector<double>& b) const;
 
@@ -85,9 +108,9 @@ namespace JOGSurrogate
         std::vector<std::vector<double>> formula_;  // [element][stech phase]: moles of element per mole of atoms
         double                           alpha_beta_T_ = 841.3;
         double xcs_min_ = 0, xcs_max_ = 1, xo_min_ = 0, xo_max_ = 1, sum_max_ = 1, T_min_ = 0, T_max_ = 1e9;
-        int                              oxygen_index_ = -1, caesium_index_ = -1;
-        std::vector<DenseNetwork>        stech_networks_;
-        DenseNetwork                     partition_network_, opot_network_;
+        int    oxygen_index_ = -1, caesium_index_ = -1;
+        std::vector<DenseNetwork> stech_networks_;
+        DenseNetwork              partition_network_, opot_network_;
     };
 
     /// Model loaded once per path and shared by all calls.
