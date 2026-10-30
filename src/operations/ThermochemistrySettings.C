@@ -141,6 +141,9 @@ ThermochemistrySettings LoadThermochemistrySettings(const std::string& path)
             settings.fission_products.elements = splitList(value, ',');
         else if (key == "fission_products.locations")
             settings.fission_products.locations = splitList(value, ',');
+        // CODE DEVELOPMENT : JOG NEURAL NETWORK (E. Perugini)
+        else if (key == "neuralnetwork.path")
+            settings.neuralnetwork_path = value;
         else if (key == "matrix.module")
             settings.matrix.module = value;
         else if (key == "matrix.database")

@@ -17,6 +17,8 @@
 #include "Constants.h"
 #include "MainVariables.h"
 #include "OCUtilsCoupling.h"
+#include "JOGSurrogate.h"
+#include "JOGSurrogateCoupling.h"
 #include "Simulation.h"
 #include "ThermochemistrySettings.h"
 
@@ -213,7 +215,17 @@ void Simulation::SetPhaseDiagram()
                 break;
         }
 
-        if (location_settings->module != "OPENCALPHAD")
+        // CODE DEVELOPMENT : JOG NEURAL NETWORK (E. Perugini)
+        // fission_products.module = NEURALNETWORK: the grain-boundary equilibrium is given by the JOG ANN
+        // instead of OpenCalphad; everything downstream is unchanged.
+        const bool use_neural_network = location_settings->module == "NEURALNETWORK";
+        if (use_neural_network && location_case == PhaseDiagramLocation::Matrix)
+        {
+            std::cerr << "Error: matrix.module = NEURALNETWORK is not available (grain boundary only)" << std::endl;
+            exit(1);
+        }
+
+        if (location_settings->module != "OPENCALPHAD" && !use_neural_network)
         {
             if (location_case == PhaseDiagramLocation::GrainBoundary)
                 moveFissionProductsWithoutThermochemistry();
@@ -267,6 +279,24 @@ void Simulation::SetPhaseDiagram()
         }
         else
         {
+            // CODE DEVELOPMENT : JOG NEURAL NETWORK (E. Perugini)
+            if (use_neural_network)
+            {
+                const JOGSurrogate::Model& model = JOGSurrogate::sharedModel(
+                    JOGSurrogateCoupling::resolveWeightsPath(Sciantix_thermochemistry_settings.neuralnetwork_path, TestPath));
+                JOGSurrogate::Result nn_result;
+                solved = JOGSurrogateCoupling::fillOutputData(model, current_temperature, components,
+                                                              JOGSurrogate::OxygenInput::Potential,
+                                                              current_oxygen_potential, output_data, &nn_result);
+                static bool out_of_domain_warned = false;
+                if (solved && nn_result.flags != 0 && !out_of_domain_warned)
+                {
+                    std::cerr << "Warning: JOG neural network evaluated outside its training domain (flags "
+                              << nn_result.flags << "); warning shown once" << std::endl;
+                    out_of_domain_warned = true;
+                }
+            }
+            else  // OpenCalphad (original code, unchanged)
             for (const auto& solver : solvers)
             {
                 output_data.solution_phases.clear();

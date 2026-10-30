@@ -41,6 +41,10 @@ struct ThermochemistrySettings
     double coupling_temperature_tolerance = 5.0;     // K, absolute
     double coupling_composition_tolerance = 1.0e-3;  // relative
     int    coupling_max_stale_steps       = 20;
+
+    // CODE DEVELOPMENT : JOG NEURAL NETWORK (E. Perugini)
+    // Weights of the JOG ANN, used when fission_products.module = NEURALNETWORK (grain boundary only).
+    std::string neuralnetwork_path = "JOG_ANN.txt";  // absolute, or searched in the test folder and in data/
 };
 
 ThermochemistrySettings LoadThermochemistrySettings(const std::string& path);
