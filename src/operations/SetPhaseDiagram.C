@@ -262,14 +262,18 @@ void Simulation::SetPhaseDiagram()
         bool         solved = false;
         OCOutputData output_data;
 
-        if (cacheIsFresh(cache,
-                         location_settings->database,
-                         current_temperature,
-                         current_pressure,
-                         current_oxygen_potential,
-                         oxygen_potential_matters,
-                         components,
-                         Sciantix_thermochemistry_settings))
+        // CODE DEVELOPMENT : JOG NEURAL NETWORK (E. Perugini)
+        // The network is cheap: by default it is evaluated at every step, without reusing the cache.
+        const bool use_cache = !use_neural_network || Sciantix_thermochemistry_settings.neuralnetwork_use_cache;
+
+        if (use_cache && cacheIsFresh(cache,
+                                      location_settings->database,
+                                      current_temperature,
+                                      current_pressure,
+                                      current_oxygen_potential,
+                                      oxygen_potential_matters,
+                                      components,
+                                      Sciantix_thermochemistry_settings))
         {
             // Reuse the cached, normalized equilibrium as-is: it will be rescaled by the
             // *current* total_input_content below, exactly like a fresh solve would be.
@@ -293,11 +297,27 @@ void Simulation::SetPhaseDiagram()
                                                               output_data,
                                                               &nn_result);
                 static bool out_of_domain_warned = false;
-                if (solved && nn_result.flags != 0 && !out_of_domain_warned)
+                const int domain_flags = nn_result.flags & (JOGSurrogate::MuOBelowRange | JOGSurrogate::MuOAboveRange |
+                                                            JOGSurrogate::InputClamped);
+                if (solved && domain_flags != 0 && !out_of_domain_warned)
                 {
                     std::cerr << "Warning: JOG neural network evaluated outside its training domain (flags "
-                              << nn_result.flags << "); warning shown once" << std::endl;
+                              << domain_flags << "); warning shown once" << std::endl;
                     out_of_domain_warned = true;
+                }
+                static bool rest_ratio_warned = false;
+                if (solved && (nn_result.flags & JOGSurrogate::RestRatioOff) && !rest_ratio_warned)
+                {
+                    std::cerr
+                        << "Warning: JOG neural network: the ratios among Ba, Mo, Pd, Rh, Ru, Tc at the grain boundary"
+                        << " differ from the training ratios by " << 100.0 * nn_result.rest_ratio_deviation
+                        << "% (tolerance " << 100.0 * model.restRatioTolerance() << "%). Actual / training:";
+                    for (size_t e = 0; e < model.elements().size(); ++e)
+                        if (model.restRatios()[e] > 0.0)
+                            std::cerr << " " << model.elements()[e] << " " << nn_result.rest_ratio[e] << "/"
+                                      << model.restRatios()[e];
+                    std::cerr << "; warning shown once" << std::endl;
+                    rest_ratio_warned = true;
                 }
             }
             else  // OpenCalphad (original code, unchanged)

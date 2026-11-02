@@ -45,6 +45,9 @@ struct ThermochemistrySettings
     // CODE DEVELOPMENT : JOG NEURAL NETWORK (E. Perugini)
     // Weights of the JOG ANN, used when fission_products.module = NEURALNETWORK (grain boundary only).
     std::string neuralnetwork_path = "JOG_ANN.txt";  // absolute, or searched in the test folder and in data/
+    // The network is evaluated at every time step: the cache of the previous equilibrium is not used,
+    // unless this flag is set (kept only to measure its effect).
+    bool neuralnetwork_use_cache = false;
 };
 
 ThermochemistrySettings LoadThermochemistrySettings(const std::string& path);

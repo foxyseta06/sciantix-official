@@ -144,6 +144,8 @@ ThermochemistrySettings LoadThermochemistrySettings(const std::string& path)
         // CODE DEVELOPMENT : JOG NEURAL NETWORK (E. Perugini)
         else if (key == "neuralnetwork.path")
             settings.neuralnetwork_path = value;
+        else if (key == "neuralnetwork.use_cache")
+            settings.neuralnetwork_use_cache = parseBool(value);
         else if (key == "matrix.module")
             settings.matrix.module = value;
         else if (key == "matrix.database")
