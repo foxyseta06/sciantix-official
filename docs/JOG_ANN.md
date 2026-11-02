@@ -22,7 +22,11 @@ Author: E. Perugini (MSc thesis, Politecnico di Milano, 2026).
    `OTHER` holds the phases without a dedicated network (Cs oxides, Cs and Ba polymolybdates). The manifest is limited
    to 123 entries, which is why an unused entry is reused instead of adding one.
 4. Run SCIANTIX as usual. If the network is evaluated outside its training domain, a single warning is printed and
-   the inputs are projected onto the domain.
+   the inputs are projected onto the domain. If the ratios among Ba, Mo, Pd, Rh, Ru, Tc at the grain boundary differ
+   from those of the training data (Mo:Ba:Tc:Ru:Rh:Pd = 21.9:9.9:5.3:19.8:5.9:18.9) by more than 5%, a single warning
+   prints the actual and training ratios.
+5. The network is evaluated at every time step: the cache of the previous equilibrium used with OpenCalphad
+   (`coupling.*` tolerances) is skipped. `neuralnetwork.use_cache = true` restores it, only to measure its effect.
 
 `matrix.module = NEURALNETWORK` is not available (grain boundary only).
 
@@ -50,9 +54,11 @@ Training domain: X_Cs 0.01–0.8, X_O 1/15–0.8, X_Cs + X_O ≤ 13/15, T 300–
 - C++ and Python reference implementations agree to 1e-12 on 672 test vectors (engine in `src/coupling/JOGSurrogate.C`).
 
 ## Weights file format
-Plain text, read by `JOGSurrogate::Model::load`; lines starting with `#` are comments. After the header `JOG_ANN 1`
+Plain text, read by `JOGSurrogate::Model::load`; lines starting with `#` are comments. After the header `JOG_ANN 2`
 come the element list, the phase groups, the stoichiometric phases with their atoms per formula and exact formulas,
-the solution phases, the α/β temperature of Cs₂MoO₄ and the training domain. Then one `net` block per network
+the solution phases, the α/β temperature of Cs₂MoO₄, the training domain, the fixed ratios among Ba, Mo, Pd, Rh,
+Ru, Tc of the training data (`rest_ratios`, in the order of `elements`, 0 for Cs and O) and their relative
+tolerance (`rest_ratio_tolerance`). Version 1 files have no ratios and are still accepted. Then one `net` block per network
 (9 stoichiometric phases, `PARTITION`, `OPOT`), each with input/output min-max normalization, `clip01` and its
 layers (`layer n_in n_out relu|linear`, then `W` row-major with rows = outputs, then `b`). The file ends with `end`.
 Retraining with the same architecture only requires replacing this file.

@@ -1,9 +1,11 @@
-JOG_ANN 1
+JOG_ANN 2
 # JOG ANN weights (E. Perugini, MSc thesis, Politecnico di Milano, 2026). See docs/JOG_ANN.md.
 # 9 stoichiometric-phase networks (7x20, ReLU), partition network (5x64, softmax per element, KL loss),
 # monotone oxygen-potential network OPOT (5x40) inverted for mu(O2) -> X_O.
 # Training data: minimum-G equilibria (OpenCalphad and pycalphad), TDB BaMoO_CsMoO_MoPdRhRuTc_merged.TDB, 1 bar.
 # Format: keywords followed by numbers; weight matrices W are row-major (rows = outputs).
+# rest_ratios: fixed ratios among Ba, Mo, Pd, Rh, Ru, Tc of the training data (Mo:Ba:Tc:Ru:Rh:Pd = 21.9:9.9:5.3:19.8:5.9:18.9),
+# in the order of 'elements' (0 for Cs and O). SCIANTIX warns once if the grain-boundary ratios differ by more than the tolerance.
 elements 8 Ba Cs Mo O Pd Rh Ru Tc
 groups 16 CS2MOO4 HCP_A3 LIQUID GAS FCC_A1 BA3MOO6 HALITE MOPD2 BAMOO4 MO2_C11A BA2MOO5 BCC_A2 HCP_ORD MOO2 PEROVSKITE OTHER
 stech 9 CS2MOO4 BA3MOO6 BAMOO4 BA2MOO5 MOPD2 HALITE MO2_C11A MOO2 PEROVSKITE
@@ -12,6 +14,8 @@ stech_formula 0 0.2857142857142857 0.14285714285714285 0.5714285714285714 0 0 0 
 solution 6 HCP_A3 LIQUID GAS FCC_A1 BCC_A2 HCP_ORD
 alpha_beta_T 841.3
 domain 0.01 0.80000000000000004 0.066666666666666596 0.80000000000000004 0.8666666666666667 300 2300
+rest_ratios 0.1211750305997552 0 0.2680538555691554 0 0.23133414932680535 0.07221542227662178 0.2423500611995104 0.06487148102815177
+rest_ratio_tolerance 0.05
 net CS2MOO4_S1+CS2MOO4_S2
 input_min 0.01 0.066666666666666596 300
 input_max 0.80000000000000004 0.80000000000000004 2300
