@@ -46,14 +46,17 @@ namespace JOGSurrogate
     {
         MuOBelowRange = 1,  // mu(O) below the network range: X_O set to its minimum
         MuOAboveRange = 2,  // mu(O) above the network range: X_O set to its maximum
-        InputClamped  = 4   // (X_Cs, X_O, T) outside the training domain: network inputs projected on it
+        InputClamped  = 4,  // (X_Cs, X_O, T) outside the training domain: network inputs projected on it
+        RestRatioOff  = 8   // ratios among Ba, Mo, Pd, Rh, Ru, Tc differ from the training ratios beyond the tolerance
     };
 
     struct Result
     {
-        double                           x_o   = 0.0;
-        double                           x_cs  = 0.0;
-        int                              flags = 0;
+        double                           x_o                  = 0.0;
+        double                           x_cs                 = 0.0;
+        int                              flags                = 0;
+        double                           rest_ratio_deviation = 0.0;  // max relative deviation from the training ratios
+        std::vector<double>              rest_ratio;  // actual ratios among the rest metals (elements() order)
         std::vector<std::vector<double>> moles;  // [group][element], moles per mole of system (sum over groups = input)
     };
 
@@ -93,6 +96,14 @@ namespace JOGSurrogate
         {
             return alpha_beta_T_;
         }
+        const std::vector<double>& restRatios() const
+        {
+            return rest_ratio_;
+        }  // training ratios (elements() order; 0 for Cs, O)
+        double restRatioTolerance() const
+        {
+            return rest_ratio_tolerance_;
+        }
         int oxygenIndex() const
         {
             return oxygen_index_;
@@ -107,6 +118,8 @@ namespace JOGSurrogate
         std::vector<int>                 stech_atoms_, stech_index_, solution_index_;
         std::vector<std::vector<double>> formula_;  // [element][stech phase]: moles of element per mole of atoms
         double                           alpha_beta_T_ = 841.3;
+        std::vector<double>              rest_ratio_;                   // empty for format version 1
+        double                           rest_ratio_tolerance_ = 0.05;  // relative
         double xcs_min_ = 0, xcs_max_ = 1, xo_min_ = 0, xo_max_ = 1, sum_max_ = 1, T_min_ = 0, T_max_ = 1e9;
         int    oxygen_index_ = -1, caesium_index_ = -1;
         std::vector<DenseNetwork> stech_networks_;

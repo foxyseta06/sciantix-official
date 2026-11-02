@@ -126,15 +126,22 @@ namespace JOGSurrogate
             h[i] = (x[i] - input_min[i]) / (input_max[i] - input_min[i]);
         for (size_t l = 0; l < weights.size(); ++l)
         {
-            std::vector<double> o(n_out[l]);
-            for (int j = 0; j < n_out[l]; ++j)
+            // raw pointers and per-layer constants: the same arithmetic, fast also in unoptimized (-O0) builds
+            const int           ni = n_in[l], no = n_out[l];
+            const bool          rl = relu[l];
+            const double*       W  = weights[l].data();
+            const double*       B  = biases[l].data();
+            const double*       hp = h.data();
+            std::vector<double> o(no);
+            double*             op = o.data();
+            for (int j = 0; j < no; ++j)
             {
                 double        s = 0.0;  // same summation order as numpy (W @ h): products then bias
-                const double* w = &weights[l][static_cast<size_t>(j) * n_in[l]];
-                for (int i = 0; i < n_in[l]; ++i)
-                    s += w[i] * h[i];
-                s += biases[l][j];
-                o[j] = (relu[l] && s < 0.0) ? 0.0 : s;
+                const double* w = W + static_cast<size_t>(j) * ni;
+                for (int i = 0; i < ni; ++i)
+                    s += w[i] * hp[i];
+                s += B[j];
+                op[j] = (rl && s < 0.0) ? 0.0 : s;
             }
             h.swap(o);
         }
@@ -160,7 +167,8 @@ namespace JOGSurrogate
         {
             Reader r(in);
             r.expect("JOG_ANN");
-            if (r.integer() != 1)
+            const int version = r.integer();
+            if (version != 1 && version != 2)
                 throw std::runtime_error("unsupported file version");
             r.expect("elements");
             elements_ = r.names(r.integer());
@@ -190,6 +198,15 @@ namespace JOGSurrogate
             sum_max_ = r.number();
             T_min_   = r.number();
             T_max_   = r.number();
+            rest_ratio_.clear();
+            if (version >= 2)
+            {
+                // fixed ratios among the metals other than Cs assumed by the training data
+                r.expect("rest_ratios");
+                rest_ratio_ = r.numbers(elements_.size());
+                r.expect("rest_ratio_tolerance");
+                rest_ratio_tolerance_ = r.number();
+            }
             stech_networks_.clear();
             for (const auto& s : stech_)
                 stech_networks_.push_back(readNetwork(r, s == "CS2MOO4" ? "CS2MOO4_S1+CS2MOO4_S2" : s));
@@ -287,6 +304,27 @@ namespace JOGSurrogate
         for (double& v : r)
             v /= sum_metals;
         const double y_cs = r[caesium_index_];
+
+        // ratios among the rest metals (O and Cs excluded), compared with the training ratios
+        if (!rest_ratio_.empty())
+        {
+            double sum_rest = 0.0;
+            for (size_t e = 0; e < ne; ++e)
+                if (static_cast<int>(e) != oxygen_index_ && static_cast<int>(e) != caesium_index_)
+                    sum_rest += r[e];
+            res.rest_ratio.assign(ne, 0.0);
+            for (size_t e = 0; e < ne; ++e)
+            {
+                if (static_cast<int>(e) == oxygen_index_ || static_cast<int>(e) == caesium_index_ || sum_rest <= 0.0)
+                    continue;
+                res.rest_ratio[e] = r[e] / sum_rest;
+                if (rest_ratio_[e] > 0.0)
+                    res.rest_ratio_deviation = std::max(res.rest_ratio_deviation,
+                                                        std::abs(res.rest_ratio[e] - rest_ratio_[e]) / rest_ratio_[e]);
+            }
+            if (res.rest_ratio_deviation > rest_ratio_tolerance_)
+                res.flags |= RestRatioOff;
+        }
 
         double x_o = 0.0;
         if (mode == OxygenInput::Content)
