@@ -63,6 +63,9 @@ REGISTRY = [
     ("hbs",      "validation", "hbs",      "test_UO2HBS",  (), None),
     ("jog", "validation", "jog", "test_PHENIXpins", ("thermochemistry_output.txt",),
         OCRequirement("skip_group", ("BaMoO_CsMoO_MoPdRhRuTc_merged.TDB",), ())),
+    # JOG ANN: same PHENIX cases with fission_products.module = NEURALNETWORK (no TDB needed, OC-linked build needed)
+    ("jog-ann", "validation", "jog_ann", "test_PHENIXpins", ("thermochemistry_output.txt",),
+        OCRequirement("skip_group", (), ())),
     ("oxygenpotential-freshfuel", "validation", "oxygenpotential/freshfuel", "test_",
         (), OCRequirement("column_degrade", ("upuo-v21.TDB",), OXYGEN_POTENTIAL_MARKERS)),
     ("oxygenpotential-burnup", "validation", "oxygenpotential/burnup", "test_",
